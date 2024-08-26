@@ -25,16 +25,18 @@ function connect(event) {
     const socket = new SockJS('/ws');
     stompClient = Stomp.over(socket);
 
+    // STOMP 연결
     stompClient.connect({}, onConnected, onError);
   }
   event.preventDefault();
 }
 
 function onConnected() {
+  // STOMP 메시징 구독
   stompClient.subscribe(`/queue/${nickname}/queue/messages`, onMessageReceived);
   stompClient.subscribe(`/topic/user`, onMessageReceived);
 
-  // register the connected user
+  // 연결된 사용자 등록 (@MessageMapping("/user.addUser") 매핑) - register the connected user
   stompClient.send("/app/user.addUser",
       {},
       JSON.stringify({nickName: nickname, fullName: fullname, status: 'ONLINE'})
@@ -43,6 +45,7 @@ function onConnected() {
   findAndDisplayConnectedUsers().then();
 }
 
+// 연결된 모든 사용자 정보 조회
 async function findAndDisplayConnectedUsers() {
   const connectedUsersResponse = await fetch('/users');
   let connectedUsers = await connectedUsersResponse.json();
@@ -85,6 +88,7 @@ function appendUserElement(user, connectedUsersList) {
   connectedUsersList.appendChild(listItem);
 }
 
+// 대화창 활성화
 function userItemClick(event) {
   document.querySelectorAll('.user-item').forEach(item => {
     item.classList.remove('active');
@@ -103,6 +107,18 @@ function userItemClick(event) {
 
 }
 
+// 로그인한 사용자 기준 대화 정보 불러오기
+async function fetchAndDisplayUserChat() {
+  const userChatResponse = await fetch(`/messages/${nickname}/${selectedUserId}`);
+  const userChat = await userChatResponse.json();
+  chatArea.innerHTML = '';
+  userChat.forEach(chat => {
+    displayMessage(chat.senderId, chat.content);
+  });
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+// 모든 일대일 채팅 불러오기
 function displayMessage(senderId, content) {
   const messageContainer = document.createElement('div');
   messageContainer.classList.add('message');
@@ -117,22 +133,13 @@ function displayMessage(senderId, content) {
   chatArea.appendChild(messageContainer);
 }
 
-async function fetchAndDisplayUserChat() {
-  const userChatResponse = await fetch(`/messages/${nickname}/${selectedUserId}`);
-  const userChat = await userChatResponse.json();
-  chatArea.innerHTML = '';
-  userChat.forEach(chat => {
-    displayMessage(chat.senderId, chat.content);
-  });
-  chatArea.scrollTop = chatArea.scrollHeight;
-}
-
-
+// 예외 처리
 function onError() {
   connectingElement.textContent = 'Could not connect to WebSocket server. Please refresh this page to try again!';
   connectingElement.style.color = 'red';
 }
 
+// 메시지 전송(@MessageMapping("/chat")로 매핑)
 function sendMessage(event) {
   const messageContent = messageInput.value.trim();
   if (messageContent && stompClient) {
@@ -174,6 +181,7 @@ async function onMessageReceived(payload) {
   }
 }
 
+// 로그아웃 (@MessageMapping("/user.disconnectUser")로 매핑)
 function onLogout() {
   stompClient.send("/app/user.disconnectUser",
       {},
