@@ -15,15 +15,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class UserController {
 
     private final UserService userService;
-    private final SimpMessagingTemplate messagingTemplate;
 
     @MessageMapping("/user.addUser")
     @SendTo("/topic/user")
     public User adduser(@Payload User user) {
 
         userService.saveUser(user);
-        // messagingTemplate.convertAndSend("/user/" + user.getNickName() + "/**", user);
-
         return user;
     }
 
@@ -32,7 +29,6 @@ public class UserController {
     public User disconnect(@Payload User user) {
 
         userService.disconnect(user);
-        //messagingTemplate.convertAndSend("/user/" + user.getNickName() + "/**", user);
         return user;
     }
 
